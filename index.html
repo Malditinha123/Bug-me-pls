@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emulador TikTok - Controle de Tempo Consciente</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-neutral: #f7f7f5;
+      --surface-neutral: #ebebea;
+      --border-neutral: #dcdcd8;
+      --text-graphite: #1f1f1e;
+      --text-muted: #6e6e6a;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #ecece8 0%, #dcdcd6 100%);
+      color: var(--text-graphite);
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    /* Moldura realista do smartphone */
+    .phone-chassis {
+      width: 100%;
+      max-width: 392px;
+      height: 812px;
+      max-height: 92vh;
+      background: #141414;
+      border-radius: 48px;
+      padding: 12px;
+      box-shadow:
+        0 30px 60px -15px rgba(0, 0, 0, 0.35),
+        0 0 0 2px #2c2c2c,
+        inset 0 0 0 2px #000000;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: #000000;
+      border-radius: 38px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Dynamic Island / Notch */
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 112px;
+      height: 26px;
+      background: #090909;
+      border-radius: 20px;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 10px;
+      pointer-events: none;
+    }
+
+    .phone-camera {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #2b3a67, #0a0d18);
+      border: 1px solid #1e2230;
+    }
+
+    /* Feed vertical com snap scroll */
+    .tiktok-feed-scroll {
+      height: 100%;
+      width: 100%;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+    }
+    .tiktok-feed-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tiktok-video-card {
+      height: 100%;
+      width: 100%;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background-color: #000000;
+    }
+
+    /* Recorte central vertical do vídeo (oculta as barras laterais borradas) */
+    /* Recorte central vertical do vídeo (oculta as barras laterais borradas caso existam) */
+    .tiktok-cropped-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      pointer-events: none;
+    }
+
+    /* Animações de fundo simulando vídeos dinâmicos */
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .video-animated-bg {
+      background-size: 200% 200%;
+      animation: gradientFlow 10s ease infinite;
+    }
+
+    @keyframes spinDisc {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin-disc {
+      animation: spinDisc 6s linear infinite;
+    }
+
+    /* Animação do cronômetro piscando vermelho aos 10 minutos */
+    @keyframes timerAlertPulse {
+      0%, 100% {
+        transform: scale(1);
+        color: #ff1e42;
+        text-shadow: 0 0 12px rgba(255, 30, 66, 0.85);
+      }
+      50% {
+        transform: scale(1.16);
+        color: #ff5c77;
+        text-shadow: 0 0 20px rgba(255, 30, 66, 1);
+      }
+    }
+
+    .timer-alert-active {
+      animation: timerAlertPulse 0.65s ease-in-out infinite;
+      background: rgba(60, 5, 15, 0.85) !important;
+      border-color: rgba(255, 30, 66, 0.8) !important;
+    }
+
+    /* Animação do Alien Cutucando a Tela */
+    @keyframes alienPokeMotion {
+      0%, 100% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+      }
+      35% {
+        transform: translate(-6px, -6px) rotate(-4deg) scale(1.03);
+      }
+      50% {
+        transform: translate(12px, 10px) rotate(6deg) scale(0.96);
+      }
+      65% {
+        transform: translate(4px, 3px) rotate(2deg) scale(1.01);
+      }
+    }
+
+    @keyframes pokeFingerJab {
+      0%, 100% {
+        transform: translate(0, 0) scale(1);
+      }
+      45% {
+        transform: translate(-8px, -10px) scale(1.08);
+      }
+      55% {
+        transform: translate(10px, 12px) scale(0.94);
+      }
+    }
+
+    @keyframes pokeRipple {
+      0%, 48% {
+        opacity: 0;
+        transform: scale(0.2);
+      }
+      55% {
+        opacity: 0.9;
+        transform: scale(0.85);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(2.1);
+      }
+    }
+
+    .alien-poking-wrapper {
+      animation: alienPokeMotion 2.1s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+      transform-origin: center center;
+    }
+
+    .alien-finger-group {
+      animation: pokeFingerJab 2.1s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+      transform-origin: 35% 55%;
+    }
+
+    .poke-ripple-ring {
+      animation: pokeRipple 2.1s ease-out infinite;
+      transform-origin: center;
+    }
+
+    /* Animação suave do Bonequinho respirando/flutuando */
+    @keyframes bonequinhoFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-6px) scale(1.02); }
+    }
+    .bonequinho-float {
+      animation: bonequinhoFloat 3s ease-in-out infinite;
+    }
+
+    /* Custom Scrollbar discreta para o menu */
+    .neutral-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .neutral-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .neutral-scroll::-webkit-scrollbar-thumb {
+      background: #cfcfc9;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row items-center justify-center p-4 sm:p-6 gap-6 lg:gap-10">
+
+  <!-- =========================================================
+       ÁREA 1: EMULADOR DE SMARTPHONE COM TIKTOK
+  ========================================================== -->
+  <div class="flex flex-col items-center justify-center">
+    <div class="phone-chassis">
+      <div class="phone-screen" id="phoneScreen">
+        
+        <!-- Notch Superior -->
+        <div class="phone-notch">
+          <div class="phone-camera"></div>
+        </div>
+
+        <!-- Barra de Status do Celular -->
+        <div class="w-full pt-3 pb-1 px-6 flex items-center justify-between text-[11px] font-semibold text-white/90 z-40 pointer-events-none select-none">
+          <span id="phoneClock">18:10</span>
+          <div class="flex items-center gap-1.5">
+            <!-- Sinal 5G -->
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2 22h20V2z" opacity="0.3"/><path d="M2 22h15V7z"/>
+            </svg>
+            <!-- Bateria -->
+            <div class="w-5 h-2.5 border border-white/80 rounded-[3px] p-[1px] flex items-center">
+              <div class="w-3.5 h-full bg-white rounded-[1px]"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =====================================================
+             BOTÃO QUADRADO DISCRETO NO CANTO SUPERIOR DIREITO
+             (Ícone fiel ao Bonequinho1.jpg)
+        ====================================================== -->
+        <button
+          id="discreteMenuBtn"
+          type="button"
+          title="Abrir Controle de Tempo"
+          aria-label="Abrir Controle de Tempo"
+          class="absolute top-11 right-3.5 z-50 w-12 h-12 rounded-2xl bg-black/45 hover:bg-black/70 active:scale-95 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-200 shadow-lg cursor-pointer group"
+        >
+          <!-- SVG Vetorial fiel ao Bonequinho1.jpg -->
+          <svg viewBox="0 0 100 100" class="w-8 h-8 transition-transform duration-200 group-hover:scale-105" fill="none">
+            <path
+              d="M 43 22 C 42 12, 58 11, 59 22 C 60 28, 57 31, 61 33 C 73 36, 82 43, 81 56 C 80 65, 72 67, 70 58 C 68 50, 64 48, 62 55 C 61 64, 65 76, 61 83 C 57 88, 52 83, 52 74 C 52 67, 48 67, 47 74 C 46 83, 40 88, 37 82 C 34 75, 38 63, 37 55 C 35 48, 29 51, 27 60 C 25 69, 17 67, 17 57 C 17 44, 27 38, 36 33 C 39 31, 35 28, 38 26 C 41 24, 43 24, 43 22 Z"
+              stroke="#FFFFFF"
+              stroke-width="6.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <!-- =====================================================
+             HUD DO CRONÔMETRO (Visível quando modo = "timer")
+        ====================================================== -->
+        <div
+          id="timerHud"
+          class="absolute top-11 left-3.5 z-40 px-3 py-1.5 rounded-xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center gap-2 transition-all duration-300 select-none pointer-events-none"
+        >
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" id="timerDot"></span>
+          <span id="timerDisplay" class="font-mono text-xs font-bold tracking-wider text-white">00:00</span>
+        </div>
+
+        <!-- =====================================================
+             CAMADA DO ELEMENTO QUE CRESCE (Visível quando modo = "growing")
+        ====================================================== -->
+        <div
+          id="growingElementLayer"
+          class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none transition-all duration-500"
+        >
+          <!-- Container escalável do elemento -->
+          <div
+            id="growingElementContainer"
+            class="relative flex items-center justify-center transition-transform duration-700 ease-out"
+            style="width: 96px; height: 96px; transform: scale(1);"
+          >
+            <!-- O SVG do Alien Cutucando ou Bonequinho será injetado aqui -->
+            <div id="activeElementVisual" class="w-full h-full flex items-center justify-center drop-shadow-[0_10px_25px_rgba(0,0,0,0.65)]"></div>
+          </div>
+
+          <!-- Aviso de Bloqueio Total (aparece somente quando atinge tamanho máximo / 10 min) -->
+          <div
+            id="lockdownBanner"
+            class="hidden mt-4 mx-5 p-4 rounded-2xl bg-neutral-900/90 backdrop-blur-xl border border-white/15 text-center text-white shadow-2xl max-w-[300px]"
+          >
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[11px] font-semibold mb-2">
+              <span>Tempo Limite Atingido</span>
+            </div>
+            <h3 class="text-sm font-bold tracking-tight mb-1">Pausa Obrigatória</h3>
+            <p class="text-xs text-neutral-300 leading-relaxed mb-2.5">
+              O elemento tomou conta da tela após 10 minutos contínuos. Aguarde ele diminuir gradualmente para voltar a usar.
+            </p>
+            <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden mb-1.5">
+              <div id="cooldownProgressBar" class="bg-emerald-400 h-full transition-all duration-300" style="width: 100%"></div>
+            </div>
+            <p class="text-[11px] font-mono text-neutral-400">
+              Liberação em: <span id="cooldownTimerText" class="text-white font-semibold">10:00</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- =====================================================
+             CONTEÚDO PRINCIPAL DO TIKTOK (Feed Simulado ou Iframe)
+        ====================================================== -->
+          <!-- MODO A: FEED INTERATIVO COM OS CLIPES DO VÍDEO -->
+          <div id="simulatedFeedContainer" class="tiktok-feed-scroll">
+            <!-- Os cards de vídeo são gerados via JS para interatividade completa -->
+          </div>
+
+          <!-- Barra Superior Flutuante de Áudio -->
+          <div class="absolute top-11 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5">
+            <button
+              id="videoMuteToggleBtn"
+              type="button"
+              onclick="toggleFeedAudio()"
+              title="Ativar ou silenciar som dos vídeos"
+              class="px-2.5 py-1 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-md whitespace-nowrap"
+            >
+              <span id="videoMuteIcon">🔇</span>
+              <span id="videoMuteLabel">Som</span>
+            </button>
+          </div>
+
+          <!-- Barra de Navegação Inferior Estilo TikTok -->
+          <div class="absolute bottom-0 left-0 right-0 h-14 bg-black/95 border-t border-white/10 px-4 flex items-center justify-around z-20 select-none">
+            <button type="button" onclick="scrollNextVideo(-1)" class="flex flex-col items-center gap-0.5 text-white cursor-pointer">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L4 9v12h5v-7h6v7h5V9l-8-6z"/></svg>
+              <span class="text-[9px] font-semibold">Início</span>
+            </button>
+            <button type="button" onclick="showToast('Aba Amigos')" class="flex flex-col items-center gap-0.5 text-white/60 hover:text-white cursor-pointer">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="text-[9px]">Amigos</span>
+            </button>
+            <!-- Botão + Central -->
+            <button type="button" onclick="scrollNextVideo(1)" title="Próximo vídeo" class="relative w-10 h-7 flex items-center justify-center cursor-pointer active:scale-95 transition">
+              <span class="absolute left-0 w-8 h-6 rounded-lg bg-[#25F4EE]"></span>
+              <span class="absolute right-0 w-8 h-6 rounded-lg bg-[#FE2C55]"></span>
+              <span class="relative w-8 h-6 rounded-lg bg-white text-black flex items-center justify-center font-bold text-base">+</span>
+            </button>
+            <button type="button" onclick="showToast('Caixa de Entrada')" class="flex flex-col items-center gap-0.5 text-white/60 hover:text-white cursor-pointer">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span class="text-[9px]">Entrada</span>
+            </button>
+            <button type="button" onclick="openControlMenu()" class="flex flex-col items-center gap-0.5 text-white/60 hover:text-white cursor-pointer">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="text-[9px]">Perfil</span>
+            </button>
+          </div>
+
+          <!-- Toast discreto interno -->
+          <div id="phoneToast" class="hidden absolute top-24 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-full bg-neutral-900/90 text-white text-[11px] font-medium border border-white/15 shadow-lg pointer-events-none whitespace-nowrap">
+            Notificação
+          </div>
+
+          <!-- =====================================================
+               MENU ESTILIZADO DE CONTROLE DE TEMPO (CORES NEUTRAS)
+               Inspirado na imagem Menu.jpg com acabamento moderno
+          ====================================================== -->
+          <div
+            id="controlMenuOverlay"
+            class="hidden absolute inset-0 z-50 bg-[#F7F7F5] text-[#1F1F1E] flex flex-col pt-10 pb-5 px-5 overflow-y-auto neutral-scroll transition-opacity duration-200 rounded-[38px]"
+          >
+          <!-- Cabeçalho do Menu -->
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-[#E5E5E0] border border-[#D4D4CE] flex items-center justify-center text-[#6E6E6A]">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold tracking-tight text-[#1F1F1E] leading-tight">Controle de Tempo</h2>
+                <p class="text-[11px] text-[#6E6E6A]">Bem-estar digital e pausas</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onclick="closeControlMenu()"
+              title="Fechar sem salvar"
+              class="w-8 h-8 rounded-full bg-[#EBEBE8] hover:bg-[#DFDFDA] flex items-center justify-center text-[#555552] transition cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- SEÇÃO 1: TIPO DE CONTROLE -->
+          <div class="mb-5">
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#6E6E6A] mb-2">
+              Tipo de controle
+            </label>
+            <div class="relative">
+              <button
+                type="button"
+                id="controlTypeDropdownBtn"
+                onclick="toggleDropdown('controlTypeList')"
+                class="w-full min-h-[54px] px-4 py-3.5 rounded-2xl bg-white border-2 border-[#DCDCD8] hover:border-[#B8B8B2] shadow-xs flex items-center justify-between text-left transition cursor-pointer"
+              >
+                <div class="flex items-center gap-3">
+                  <span id="selectedControlIcon" class="text-[#1F1F1E]"></span>
+                  <span id="selectedControlLabel" class="text-[15px] font-semibold text-[#1F1F1E]">Cronômetro</span>
+                </div>
+                <svg id="controlTypeChevron" class="w-5 h-5 text-[#6E6E6A] transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <!-- Lista Dropdown: Tipo de Controle -->
+              <div
+                id="controlTypeList"
+                class="hidden relative z-30 mt-2 rounded-2xl bg-white border-2 border-[#DCDCD8] shadow-xl overflow-hidden divide-y divide-[#EFEFEC]"
+              >
+                <button
+                  type="button"
+                  onclick="selectControlType('growing')"
+                  class="w-full min-h-[60px] px-4 py-3.5 flex items-center justify-between hover:bg-[#F2F2EF] transition cursor-pointer text-left"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-[#F0F0EC] border border-[#DCDCD8] flex items-center justify-center text-sm font-bold text-[#1F1F1E] shrink-0">A</span>
+                    <div>
+                      <div class="text-[15px] font-semibold text-[#1F1F1E]">Elemento que cresce</div>
+                      <div class="text-[11px] text-[#6E6E6A]">Cresce a cada 1 min e bloqueia aos 10 min</div>
+                    </div>
+                  </div>
+                  <span id="checkControlGrowing" class="hidden text-[#1F1F1E] font-bold text-base">✓</span>
+                </button>
+
+                <button
+                  type="button"
+                  onclick="selectControlType('timer')"
+                  class="w-full min-h-[60px] px-4 py-3.5 flex items-center justify-between hover:bg-[#F2F2EF] transition cursor-pointer text-left"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-[#F0F0EC] border border-[#DCDCD8] flex items-center justify-center text-[#1F1F1E] shrink-0">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <div class="text-[15px] font-semibold text-[#1F1F1E]">Cronômetro</div>
+                      <div class="text-[11px] text-[#6E6E6A]">Alerta sonoro e vermelho a cada 10 min</div>
+                    </div>
+                  </div>
+                  <span id="checkControlTimer" class="text-[#1F1F1E] font-bold text-base">✓</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEÇÃO 2: ESCOLHA O ELEMENTO & COR -->
+          <div class="mb-5 p-4 rounded-2xl bg-[#EFEFEC] border border-[#E0E0DA]">
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#6E6E6A] mb-2.5">
+              Escolha o elemento
+            </label>
+
+            <!-- Cards de Seleção: Alien vs Bonequinho -->
+            <div class="grid grid-cols-2 gap-3 mb-3.5">
+              <!-- Opção 1: Alien -->
+              <button
+                type="button"
+                id="btnElementAlien"
+                onclick="selectElementChoice('alien')"
+                class="min-h-[112px] p-3.5 rounded-2xl bg-white border-2 border-[#DCDCD8] hover:border-[#9E9E98] flex flex-col items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
+              >
+                <div class="w-13 h-13 rounded-xl bg-[#F7F7F5] flex items-center justify-center p-1.5" id="previewLogoAlien">
+                  <!-- Logo Alien injetado via JS -->
+                </div>
+                <span class="text-sm font-bold text-[#1F1F1E]">Alien</span>
+                <span class="text-[10px] text-[#6E6E6A] leading-tight text-center">Cutuca a tela</span>
+              </button>
+
+              <!-- Opção 2: Bonequinho -->
+              <button
+                type="button"
+                id="btnElementBonequinho"
+                onclick="selectElementChoice('bonequinho')"
+                class="min-h-[112px] p-3.5 rounded-2xl bg-white border-2 border-[#1F1F1E] flex flex-col items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
+              >
+                <div class="w-13 h-13 rounded-xl bg-[#F7F7F5] flex items-center justify-center p-1.5" id="previewLogoBonequinho">
+                  <!-- Logo Bonequinho injetado via JS -->
+                </div>
+                <span class="text-sm font-bold text-[#1F1F1E]">Bonequinho</span>
+                <span class="text-[10px] text-[#6E6E6A] leading-tight text-center">Silhueta minimal</span>
+              </button>
+            </div>
+
+            <!-- Opção de Cor dos Elementos -->
+            <div class="pt-3 border-t border-[#E0E0DA]">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-[#52524E]">Cor do elemento</span>
+                <span id="selectedColorHex" class="text-[11px] font-mono font-medium text-[#6E6E6A]">#1F1F1E</span>
+              </div>
+              <div class="flex items-center justify-between gap-1.5">
+                <!-- Swatches de cores maiores -->
+                <button type="button" onclick="selectElementColor('#FFFFFF')" title="Branco Puro" class="w-8 h-8 rounded-full bg-white border-2 border-[#C8C8C2] shadow-xs cursor-pointer hover:scale-110 transition"></button>
+                <button type="button" onclick="selectElementColor('#1F1F1E')" title="Grafite Neutro" class="w-8 h-8 rounded-full bg-[#1F1F1E] border-2 border-[#C8C8C2] shadow-xs cursor-pointer hover:scale-110 transition"></button>
+                <button type="button" onclick="selectElementColor('#4ADE80')" title="Verde Alien" class="w-8 h-8 rounded-full bg-[#4ADE80] border-2 border-[#C8C8C2] shadow-xs cursor-pointer hover:scale-110 transition"></button>
+                <button type="button" onclick="selectElementColor('#38BDF8')" title="Azul Celeste" class="w-8 h-8 rounded-full bg-[#38BDF8] border-2 border-[#C8C8C2] shadow-xs cursor-pointer hover:scale-110 transition"></button>
+                <button type="button" onclick="selectElementColor('#FB7185')" title="Coral Suave" class="w-8 h-8 rounded-full bg-[#FB7185] border-2 border-[#C8C8C2] shadow-xs cursor-pointer hover:scale-110 transition"></button>
+                <button type="button" onclick="selectElementColor('#FACC15')" title="Amarelo Solar" class="w-8 h-8 rounded-full bg-[#FACC15] border-2 border-[#C8C8C2] shadow-xs cursor-pointer hover:scale-110 transition"></button>
+                
+                <!-- Seletor de cor livre -->
+                <label title="Escolher cor personalizada" class="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 via-rose-400 to-indigo-500 border-2 border-[#C8C8C2] flex items-center justify-center cursor-pointer hover:scale-110 transition overflow-hidden">
+                  <input type="color" id="customColorPicker" value="#1F1F1E" onchange="selectElementColor(this.value)" class="opacity-0 w-full h-full cursor-pointer" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEÇÃO 3: ESCOLHER O SOM -->
+          <div class="mb-5">
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#6E6E6A] mb-2">
+              Escolha o som
+            </label>
+            <div class="relative">
+              <button
+                type="button"
+                id="soundDropdownBtn"
+                onclick="toggleDropdown('soundOptionsList')"
+                class="w-full min-h-[54px] px-4 py-3.5 rounded-2xl bg-white border-2 border-[#DCDCD8] hover:border-[#B8B8B2] flex items-center justify-between text-left transition cursor-pointer"
+              >
+                <div class="flex items-center gap-3 truncate pr-2">
+                  <svg class="w-5 h-5 text-[#1F1F1E] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                  </svg>
+                  <span id="selectedSoundDropdownLabel" class="text-[15px] font-semibold text-[#1F1F1E] truncate">Sound 5 (Padrão)</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span
+                    onclick="event.stopPropagation(); previewCurrentSound();"
+                    title="Testar som agora"
+                    class="px-3 py-1.5 rounded-xl bg-[#EFEFEC] hover:bg-[#E2E2DC] text-xs font-bold text-[#1F1F1E] transition"
+                  >
+                    ▶ Ouvir
+                  </span>
+                  <svg id="soundOptionsChevron" class="w-5 h-5 text-[#6E6E6A] transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </button>
+
+              <!-- Lista de Opções de Som -->
+              <div
+                id="soundOptionsList"
+                class="hidden relative z-30 mt-2 rounded-2xl bg-white border-2 border-[#DCDCD8] shadow-xl overflow-hidden divide-y divide-[#EFEFEC]"
+              >
+                <!-- Som Padrão: Sound 5 -->
+                <div class="px-4 py-3 flex items-center justify-between hover:bg-[#F5F5F2]">
+                  <button type="button" onclick="selectSound('sound5', 'Sound 5 (Padrão)')" class="flex-1 text-left text-sm font-semibold text-[#1F1F1E] cursor-pointer py-1">
+                    🔔 Sound 5 (Padrão)
+                  </button>
+                  <button type="button" onclick="playSoundById('sound5')" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#EFEFEC] hover:bg-[#E2E2DC] cursor-pointer">▶</button>
+                </div>
+
+                <!-- Sons Inventados -->
+                <div class="px-4 py-3 flex items-center justify-between hover:bg-[#F5F5F2]">
+                  <button type="button" onclick="selectSound('zen_chime', 'Sino Zen Minimalista')" class="flex-1 text-left text-sm font-semibold text-[#1F1F1E] cursor-pointer py-1">
+                    🎐 Sino Zen Minimalista
+                  </button>
+                  <button type="button" onclick="playSoundById('zen_chime')" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#EFEFEC] hover:bg-[#E2E2DC] cursor-pointer">▶</button>
+                </div>
+
+                <div class="px-4 py-3 flex items-center justify-between hover:bg-[#F5F5F2]">
+                  <button type="button" onclick="selectSound('alien_blip', 'Sinal Espacial Alien')" class="flex-1 text-left text-sm font-semibold text-[#1F1F1E] cursor-pointer py-1">
+                    🛸 Sinal Espacial Alien
+                  </button>
+                  <button type="button" onclick="playSoundById('alien_blip')" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#EFEFEC] hover:bg-[#E2E2DC] cursor-pointer">▶</button>
+                </div>
+
+                <div class="px-4 py-3 flex items-center justify-between hover:bg-[#F5F5F2]">
+                  <button type="button" onclick="selectSound('retro_arcade', 'Alerta Retrô 8-Bit')" class="flex-1 text-left text-sm font-semibold text-[#1F1F1E] cursor-pointer py-1">
+                    👾 Alerta Retrô 8-Bit
+                  </button>
+                  <button type="button" onclick="playSoundById('retro_arcade')" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#EFEFEC] hover:bg-[#E2E2DC] cursor-pointer">▶</button>
+                </div>
+
+                <div class="px-4 py-3 flex items-center justify-between hover:bg-[#F5F5F2]">
+                  <button type="button" onclick="selectSound('soft_pulse', 'Pulso Calmo de Pausa')" class="flex-1 text-left text-sm font-semibold text-[#1F1F1E] cursor-pointer py-1">
+                    🌿 Pulso Calmo de Pausa
+                  </button>
+                  <button type="button" onclick="playSoundById('soft_pulse')" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-[#EFEFEC] hover:bg-[#E2E2DC] cursor-pointer">▶</button>
+                </div>
+
+                <!-- Escolher arquivo de áudio do computador -->
+                <div class="px-4 py-3.5 bg-[#FAF9F6] hover:bg-[#F0EFEA]">
+                  <label class="flex items-center justify-between cursor-pointer">
+                    <div class="flex items-center gap-2.5">
+                      <span class="text-base">📁</span>
+                      <div>
+                        <div class="text-sm font-bold text-[#1F1F1E]">Escolher do computador...</div>
+                        <div class="text-[11px] text-[#6E6E6A]">MP3, WAV, OGG das suas pastas</div>
+                      </div>
+                    </div>
+                    <span class="px-3.5 py-2 rounded-xl bg-[#1F1F1E] text-white text-xs font-semibold">Procurar</span>
+                    <input
+                      type="file"
+                      id="customAudioFileInput"
+                      accept="audio/*"
+                      class="hidden"
+                      onchange="handleCustomAudioUpload(event)"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- =====================================================
+               RODAPÉ DO MENU (Resumo das opções + Salvar e voltar)
+               Fiel à estrutura de Menu.jpg
+          ====================================================== -->
+          <div class="mt-auto pt-3.5 border-t border-[#E0E0DA]">
+            <div class="space-y-2.5 mb-4">
+              <!-- Linha 1: Som escolhido -->
+              <div class="flex items-center gap-2.5 text-xs text-[#1F1F1E]">
+                <svg class="w-4 h-4 text-[#555552] shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                </svg>
+                <span class="text-[#6E6E6A]">Som escolhido:</span>
+                <span id="summarySoundName" class="font-semibold truncate">Sound 5 (Padrão)</span>
+              </div>
+
+              <!-- Linha 2: Elemento escolhido -->
+              <div class="flex items-center gap-2.5 text-xs text-[#1F1F1E]">
+                <svg class="w-4 h-4 text-[#555552] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 2a3 3 0 0 1 3 3c0 1.3-.8 2.4-2 2.8M12 22a3 3 0 0 1-3-3c0-1.3.8-2.4 2-2.8M2 12a3 3 0 0 1 3-3c1.3 0 2.4.8 2.8 2M22 12a3 3 0 0 1-3 3c-1.3 0-2.4-.8-2.8-2"/>
+                </svg>
+                <span class="text-[#6E6E6A]">Elemento escolhido:</span>
+                <div class="flex items-center gap-1.5">
+                  <div id="summaryElementMiniIcon" class="w-7 h-7 rounded-lg bg-[#E6E6E1] border border-[#D4D4CE] flex items-center justify-center p-0.5"></div>
+                  <span id="summaryElementName" class="font-semibold">Bonequinho</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botão Salvar e Voltar maior -->
+            <button
+              type="button"
+              onclick="saveAndCloseMenu()"
+              class="w-full min-h-[54px] py-4 px-5 rounded-2xl bg-[#1F1F1E] hover:bg-[#333330] active:scale-[0.99] text-[#F7F7F5] font-bold text-base shadow-md transition flex items-center justify-center gap-2.5 cursor-pointer"
+            >
+              <span>Salvar e voltar</span>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       ÁREA 2: CONTROLES DO SIMULADOR (LADO EXTERNO PARA TESTES)
+  ========================================================== -->
+  <aside class="w-full max-w-md bg-[#F7F7F5]/95 backdrop-blur-md border border-[#DCDCD8] rounded-3xl p-5 sm:p-6 shadow-xl text-[#1F1F1E]">
+    <div class="flex items-center justify-between border-b border-[#E4E4DF] pb-3.5 mb-4">
+      <div>
+        <span class="text-[10px] font-bold uppercase tracking-widest text-[#6E6E6A]">Painel de Testes</span>
+        <h1 class="text-lg font-bold tracking-tight">Controles do Emulador</h1>
+      </div>
+      <span id="statusBadge" class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">
+        Ativo
+      </span>
+    </div>
+
+    <!-- Acelerador de Tempo para Testes -->
+    <div class="mb-5 p-4 rounded-2xl bg-white border border-[#E0E0DA]">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-[#1F1F1E]">Simular Passagem de Tempo</span>
+        <span id="externalTimeReadout" class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#F2F2EF] text-[#1F1F1E]">00:00</span>
+      </div>
+      <p class="text-[11px] text-[#6E6E6A] mb-3 leading-relaxed">
+        Avance o relógio instantaneamente para testar o alerta sonoro/vermelho aos 10 minutos ou o crescimento progressivo do elemento.
+      </p>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <button
+          type="button"
+          onclick="advanceTimeBySeconds(60)"
+          class="py-2.5 px-3 rounded-xl bg-[#EBEBE8] hover:bg-[#DFDFDA] active:scale-98 text-[#1F1F1E] font-semibold text-xs transition cursor-pointer"
+        >
+          + 1 Minuto
+        </button>
+        <button
+          type="button"
+          onclick="simulateTenMinutesTrigger()"
+          class="py-2.5 px-3 rounded-xl bg-[#1F1F1E] hover:bg-[#343432] active:scale-98 text-white font-semibold text-xs transition cursor-pointer"
+        >
+          Simular 10 Minutos
+        </button>
+      </div>
+      <button
+        type="button"
+        onclick="resetSimulationTime()"
+        class="w-full py-2 px-3 rounded-xl border border-[#DCDCD8] hover:bg-[#F7F7F5] text-[#555552] font-medium text-xs transition cursor-pointer"
+      >
+        Resetar Tempo e Tamanho
+      </button>
+    </div>
+
+    <!-- Guia rápido das funcionalidades -->
+    <div class="space-y-2.5 text-xs text-[#555552] bg-[#EFEFEC] p-4 rounded-2xl border border-[#E2E2DC]">
+      <div class="font-semibold text-[#1F1F1E] flex items-center gap-1.5">
+        <span>💡 Como funciona:</span>
+      </div>
+      <ul class="space-y-1.5 list-disc pl-4 text-[11px] leading-relaxed">
+        <li>Clique no <strong>botão quadrado discreto</strong> no canto superior direito da tela do celular para abrir o menu.</li>
+        <li><strong>Cronômetro:</strong> A cada 10 min toca o som escolhido e os números ficam vermelhos pulsando por 5 segundos.</li>
+        <li><strong>Elemento que cresce:</strong> Cresce a cada 1 min até bloquear a tela aos 10 min, exigindo aguardar 10 min para diminuir.</li>
+        <li><strong>Alien:</strong> Quando selecionado, realiza a animação contínua de cutucar a tela com ondas de toque.</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       JAVASCRIPT COMPLETO E AUTOCONTIDO
+  ========================================================== -->
+  <script>
+    // =========================================================
+    // 1. ESTADO GLOBAL DO APLICATIVO
+    // =========================================================
+    const appState = {
+      controlType: 'timer',       // 'timer' | 'growing'
+      elementType: 'bonequinho',  // 'bonequinho' | 'alien'
+      elementColor: '#1F1F1E',    // Cor escolhida pelo usuário
+      soundId: 'sound5',          // Som escolhido
+      soundLabel: 'Sound 5 (Padrão)',
+      elapsedSeconds: 0,
+      lastTenMinMilestone: 0,
+      timerAlertRemaining: 0,
+      isLockedDown: false,
+      cooldownRemaining: 600,
+      draft: {
+        controlType: 'timer',
+        elementType: 'bonequinho',
+        elementColor: '#1F1F1E',
+        soundId: 'sound5',
+        soundLabel: 'Sound 5 (Padrão)'
+      }
+    };
+
+    // =========================================================
+    // 2. VETORES SVG (BONEQUINHO E ALIEN CUTUCANDO A TELA)
+    // =========================================================
+    function getBonequinhoSVG(color = '#1F1F1E', extraClass = '') {
+      return `
+        <svg viewBox="0 0 100 100" class="w-full h-full ${extraClass}" fill="none">
+          <path
+            d="M 43 22 C 42 12, 58 11, 59 22 C 60 28, 57 31, 61 33 C 73 36, 82 43, 81 56 C 80 65, 72 67, 70 58 C 68 50, 64 48, 62 55 C 61 64, 65 76, 61 83 C 57 88, 52 83, 52 74 C 52 67, 48 67, 47 74 C 46 83, 40 88, 37 82 C 34 75, 38 63, 37 55 C 35 48, 29 51, 27 60 C 25 69, 17 67, 17 57 C 17 44, 27 38, 36 33 C 39 31, 35 28, 38 26 C 41 24, 43 24, 43 22 Z"
+            stroke="${color}"
+            stroke-width="6.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      `;
+    }
+
+    function getAlienLogoSVG(color = '#1F1F1E') {
+      return `
+        <svg viewBox="0 0 100 100" class="w-full h-full" fill="none">
+          <!-- Antenas -->
+          <path d="M 38 26 L 30 14 M 62 26 L 70 14" stroke="${color}" stroke-width="5" stroke-linecap="round" />
+          <circle cx="29" cy="13" r="4" fill="${color}" />
+          <circle cx="71" cy="13" r="4" fill="${color}" />
+          <!-- Cabeça Alien -->
+          <path
+            d="M 50 22 C 29 22, 21 38, 24 55 C 27 71, 41 85, 50 85 C 59 85, 73 71, 76 55 C 79 38, 71 22, 50 22 Z"
+            stroke="${color}"
+            stroke-width="5.5"
+            stroke-linejoin="round"
+          />
+          <!-- Olhos amendoados -->
+          <ellipse cx="38" cy="52" rx="6.5" ry="10" transform="rotate(-18 38 52)" fill="${color}" />
+          <ellipse cx="62" cy="52" rx="6.5" ry="10" transform="rotate(18 62 52)" fill="${color}" />
+          <!-- Sorriso sutil -->
+          <path d="M 45 71 Q 50 75 55 71" stroke="${color}" stroke-width="4" stroke-linecap="round" />
+        </svg>
+      `;
+    }
+
+    function getAlienPokingSVG(color = '#4ADE80') {
+      return `
+        <svg viewBox="0 0 120 120" class="w-full h-full alien-poking-wrapper" fill="none">
+          <!-- Ondas de toque na tela -->
+          <circle cx="84" cy="76" r="14" stroke="${color}" stroke-width="3" class="poke-ripple-ring" />
+          <circle cx="84" cy="76" r="8" stroke="${color}" stroke-width="2" opacity="0.6" class="poke-ripple-ring" />
+
+          <!-- Antenas -->
+          <path d="M 42 26 L 33 13 M 64 26 L 73 13" stroke="${color}" stroke-width="5" stroke-linecap="round" />
+          <circle cx="32" cy="12" r="4.5" fill="${color}" />
+          <circle cx="74" cy="12" r="4.5" fill="${color}" />
+
+          <!-- Cabeça Alien -->
+          <path
+            d="M 53 22 C 31 22, 22 39, 25 57 C 28 74, 43 88, 53 88 C 63 88, 78 74, 81 57 C 84 39, 75 22, 53 22 Z"
+            fill="#141414"
+            fill-opacity="0.72"
+            stroke="${color}"
+            stroke-width="5.5"
+            stroke-linejoin="round"
+          />
+
+          <!-- Olhos expressivos -->
+          <ellipse cx="40" cy="52" rx="7" ry="11" transform="rotate(-18 40 52)" fill="${color}" />
+          <ellipse cx="66" cy="52" rx="7" ry="11" transform="rotate(18 66 52)" fill="${color}" />
+          <circle cx="38" cy="48" r="2" fill="#FFFFFF" />
+          <circle cx="64" cy="48" r="2" fill="#FFFFFF" />
+
+          <!-- Boca curiosa -->
+          <ellipse cx="53" cy="72" rx="4" ry="3" fill="${color}" />
+
+          <!-- Mão e dedo cutucando a tela -->
+          <g class="alien-finger-group">
+            <path
+              d="M 58 76 C 67 70, 79 68, 86 73 C 91 77, 87 83, 80 82 L 66 81 C 69 86, 65 92, 59 90 C 53 88, 51 81, 58 76 Z"
+              fill="${color}"
+              stroke="#141414"
+              stroke-width="2.5"
+              stroke-linejoin="round"
+            />
+          </g>
+        </svg>
+      `;
+    }
+
+    // =========================================================
+    // 3. MOTOR DE ÁUDIO (WEB AUDIO API + ARQUIVO DO USUÁRIO)
+    // =========================================================
+    let audioCtx = null;
+    let customAudioUrl = null;
+    let customAudioPlayer = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    function playSoundById(soundId) {
+      if (soundId === 'custom' && customAudioUrl) {
+        if (!customAudioPlayer) {
+          customAudioPlayer = new Audio();
+        }
+        customAudioPlayer.src = customAudioUrl;
+        customAudioPlayer.currentTime = 0;
+        customAudioPlayer.play().catch(() => {});
+        return;
+      }
+
+      const ctx = getAudioContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+
+      const playTone = (freq, startOffset, duration, type = 'sine', peakGain = 0.22) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now + startOffset);
+
+        gain.gain.setValueAtTime(0.0001, now + startOffset);
+        gain.gain.exponentialRampToValueAtTime(peakGain, now + startOffset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + startOffset);
+        osc.stop(now + startOffset + duration + 0.03);
+      };
+
+      switch (soundId) {
+        case 'zen_chime':
+          playTone(528, 0, 0.9, 'sine', 0.22);
+          playTone(792, 0.12, 1.1, 'sine', 0.14);
+          break;
+        case 'alien_blip':
+          playTone(620, 0, 0.12, 'triangle', 0.2);
+          playTone(940, 0.11, 0.14, 'triangle', 0.2);
+          playTone(1280, 0.22, 0.2, 'sine', 0.18);
+          break;
+        case 'retro_arcade':
+          playTone(440, 0, 0.1, 'square', 0.12);
+          playTone(554.37, 0.1, 0.1, 'square', 0.12);
+          playTone(659.25, 0.2, 0.1, 'square', 0.12);
+          playTone(880, 0.3, 0.25, 'square', 0.14);
+          break;
+        case 'soft_pulse':
+          playTone(330, 0, 0.45, 'sine', 0.22);
+          playTone(392, 0.35, 0.55, 'sine', 0.2);
+          break;
+        case 'sound5':
+        default:
+          playTone(587.33, 0, 0.22, 'sine', 0.24);
+          playTone(880, 0.16, 0.45, 'sine', 0.22);
+          break;
+      }
+    }
+
+    // =========================================================
+    // 4. FEED VERTICAL COM OS VÍDEOS ENVIADOS PELO USUÁRIO
+    // =========================================================
+    let isFeedMuted = true;
+    let feedObserver = null;
+
+    // Lista direta com os arquivos .mp4 enviados
+    const activeVideoClips = [
+      {
+        src: 'Bichinhos fofos.mp4',
+        user: '@bichinhos_fofos',
+        desc: 'Bichinhos fofos 🐾 #pets #fofura',
+        music: 'Som original - Bichinhos fofos',
+        likes: '342.8K',
+        comments: '2.910',
+        shares: '24.5K',
+        emoji: '🐾'
+      },
+      {
+        src: 'Cute Animals Compilation.mp4',
+        user: '@cute_animals',
+        desc: 'Cute Animals Compilation ✨ #animals #cute',
+        music: 'Som original - Cute Animals Compilation',
+        likes: '518.4K',
+        comments: '4.120',
+        shares: '39.1K',
+        emoji: '🐶'
+      }
+    ];
+
+    function renderSimulatedFeed() {
+      const container = document.getElementById('simulatedFeedContainer');
+
+      container.innerHTML = activeVideoClips.map((clip, index) => `
+        <div
+          class="tiktok-video-card select-none"
+          data-clip-index="${index}"
+        >
+          <!-- Vídeo vertical 9:16 -->
+          <video
+            class="tiktok-cropped-video"
+            src="${clip.src}"
+            playsinline
+            muted
+            loop
+            preload="metadata"
+            onclick="toggleFeedAudio()"
+          ></video>
+
+          <!-- Gradiente sutil nas bordas para leitura perfeita dos textos -->
+          <div class="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/75 pointer-events-none"></div>
+
+          <!-- Área central clicável para ativar/desativar som -->
+          <div onclick="toggleFeedAudio()" class="flex-1 w-full z-10 cursor-pointer"></div>
+
+          <!-- Barra lateral direita de ações (Curtir, Comentar, Compartilhar, Disco) -->
+          <div class="absolute right-3 bottom-20 flex flex-col items-center gap-4 z-10">
+            <!-- Avatar -->
+            <div class="relative mb-1">
+              <div class="w-11 h-11 rounded-full bg-neutral-900/90 border-2 border-white flex items-center justify-center text-sm font-bold text-white shadow-md">
+                ${clip.user.slice(1, 3).toUpperCase()}
+              </div>
+              <span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#FE2C55] text-white text-[11px] font-bold flex items-center justify-center">+</span>
+            </div>
+
+            <!-- Curtir -->
+            <button type="button" onclick="toggleLike(this)" class="flex flex-col items-center gap-1 text-white cursor-pointer group">
+              <div class="w-10 h-10 rounded-full bg-black/35 backdrop-blur-xs flex items-center justify-center transition transform group-active:scale-125">
+                <svg class="w-6 h-6 heart-icon transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </div>
+              <span class="text-[11px] font-semibold drop-shadow">${clip.likes}</span>
+            </button>
+
+            <!-- Comentar -->
+            <button type="button" onclick="showToast('Comentários: ${clip.comments}')" class="flex flex-col items-center gap-1 text-white cursor-pointer">
+              <div class="w-10 h-10 rounded-full bg-black/35 backdrop-blur-xs flex items-center justify-center">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                </svg>
+              </div>
+              <span class="text-[11px] font-semibold drop-shadow">${clip.comments}</span>
+            </button>
+
+            <!-- Compartilhar -->
+            <button type="button" onclick="showToast('Link copiado!')" class="flex flex-col items-center gap-1 text-white cursor-pointer">
+              <div class="w-10 h-10 rounded-full bg-black/35 backdrop-blur-xs flex items-center justify-center">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"/>
+                </svg>
+              </div>
+              <span class="text-[11px] font-semibold drop-shadow">${clip.shares}</span>
+            </button>
+
+            <!-- Disco girando -->
+            <div class="w-10 h-10 rounded-full bg-neutral-900 border-[6px] border-neutral-700 flex items-center justify-center spin-disc shadow-lg mt-1">
+              <span class="text-xs">${clip.emoji}</span>
+            </div>
+          </div>
+
+          <!-- Legenda e Música no Canto Inferior Esquerdo -->
+          <div class="w-3/4 pl-4 pb-16 z-10 text-white pointer-events-none">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-bold text-sm drop-shadow">${clip.user}</span>
+              <span class="px-1.5 py-0.5 rounded bg-white/15 text-[9px] font-semibold">${index + 1}/${activeVideoClips.length}</span>
+            </div>
+            <p class="text-xs text-white/95 leading-snug mb-2 drop-shadow">${clip.desc}</p>
+            <div class="flex items-center gap-1.5 text-[11px] text-white/90">
+              <span>🎵</span>
+              <span class="truncate">${clip.music}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      setupClipPlaybackEngine();
+    }
+
+    // Controla a reprodução automática do vídeo visível na tela
+    function setupClipPlaybackEngine() {
+      const cards = document.querySelectorAll('.tiktok-video-card');
+
+      if (feedObserver) {
+        feedObserver.disconnect();
+      }
+
+      const feedContainer = document.getElementById('simulatedFeedContainer');
+      feedObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const video = entry.target.querySelector('video');
+            if (!video) return;
+
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
+              video.muted = isFeedMuted;
+              video.play().catch(() => {});
+            } else {
+              video.pause();
+            }
+          });
+        },
+        {
+          root: feedContainer,
+          threshold: [0.65]
+        }
+      );
+
+      cards.forEach((card) => feedObserver.observe(card));
+    }
+
+    function toggleFeedAudio() {
+      isFeedMuted = !isFeedMuted;
+      const icon = document.getElementById('videoMuteIcon');
+      const label = document.getElementById('videoMuteLabel');
+
+      icon.textContent = isFeedMuted ? '🔇' : '🔊';
+      label.textContent = isFeedMuted ? 'Som' : 'Ativo';
+
+      document.querySelectorAll('.tiktok-cropped-video').forEach((video) => {
+        video.muted = isFeedMuted;
+        if (!video.paused && !isFeedMuted) {
+          video.play().catch(() => {});
+        }
+      });
+
+      showToast(isFeedMuted ? 'Som silenciado' : 'Som dos vídeos ativado 🔊');
+    }
+
+    function toggleLike(btn) {
+      const icon = btn.querySelector('.heart-icon');
+      const isLiked = icon.classList.contains('text-[#FE2C55]');
+      if (isLiked) {
+        icon.classList.remove('text-[#FE2C55]');
+      } else {
+        icon.classList.add('text-[#FE2C55]');
+        showToast('Vídeo curtido ❤️');
+      }
+    }
+
+    function scrollNextVideo(direction = 1) {
+      const feed = document.getElementById('simulatedFeedContainer');
+      const cardHeight = feed.clientHeight;
+      feed.scrollBy({ top: direction * cardHeight, behavior: 'smooth' });
+    }
+
+    // =========================================================
+    // 5. LOGICA DO MENU DE CONTROLE DE TEMPO
+    // =========================================================
+    document.getElementById('discreteMenuBtn').addEventListener('click', openControlMenu);
+
+    function openControlMenu() {
+      // Copia estado atual para o rascunho
+      appState.draft = {
+        controlType: appState.controlType,
+        elementType: appState.elementType,
+        elementColor: appState.elementColor,
+        soundId: appState.soundId,
+        soundLabel: appState.soundLabel,
+      };
+      syncMenuUIWithDraft();
+      document.getElementById('controlMenuOverlay').classList.remove('hidden');
+    }
+
+    function closeControlMenu() {
+      document.getElementById('controlMenuOverlay').classList.add('hidden');
+      document.getElementById('controlTypeList').classList.add('hidden');
+      document.getElementById('soundOptionsList').classList.add('hidden');
+      document.getElementById('controlTypeChevron')?.classList.remove('rotate-180');
+      document.getElementById('soundOptionsChevron')?.classList.remove('rotate-180');
+    }
+
+    function toggleDropdown(listId) {
+      const targetList = document.getElementById(listId);
+      const isOpening = targetList.classList.contains('hidden');
+
+      // Fecha todos os dropdowns antes de abrir o selecionado
+      document.getElementById('controlTypeList').classList.add('hidden');
+      document.getElementById('soundOptionsList').classList.add('hidden');
+      document.getElementById('controlTypeChevron')?.classList.remove('rotate-180');
+      document.getElementById('soundOptionsChevron')?.classList.remove('rotate-180');
+
+      if (isOpening) {
+        targetList.classList.remove('hidden');
+        const chevronId = listId === 'controlTypeList' ? 'controlTypeChevron' : 'soundOptionsChevron';
+        document.getElementById(chevronId)?.classList.add('rotate-180');
+
+        // Rola suavemente dentro do menu para exibir toda a lista de opções
+        setTimeout(() => {
+          targetList.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 40);
+      }
+    }
+
+    function selectControlType(type) {
+      appState.draft.controlType = type;
+      document.getElementById('controlTypeList').classList.add('hidden');
+      document.getElementById('controlTypeChevron')?.classList.remove('rotate-180');
+      syncMenuUIWithDraft();
+    }
+
+    function selectElementChoice(choice) {
+      appState.draft.elementType = choice;
+      syncMenuUIWithDraft();
+    }
+
+    function selectElementColor(hexColor) {
+      appState.draft.elementColor = hexColor;
+      document.getElementById('customColorPicker').value = hexColor;
+      syncMenuUIWithDraft();
+    }
+
+    function selectSound(soundId, label) {
+      appState.draft.soundId = soundId;
+      appState.draft.soundLabel = label;
+      document.getElementById('soundOptionsList').classList.add('hidden');
+      document.getElementById('soundOptionsChevron')?.classList.remove('rotate-180');
+      syncMenuUIWithDraft();
+      playSoundById(soundId);
+    }
+
+    function previewCurrentSound() {
+      playSoundById(appState.draft.soundId);
+    }
+
+    function handleCustomAudioUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (customAudioUrl) {
+        URL.revokeObjectURL(customAudioUrl);
+      }
+      customAudioUrl = URL.createObjectURL(file);
+      const cleanName = file.name.length > 24 ? file.name.slice(0, 22) + '...' : file.name;
+      selectSound('custom', cleanName);
+    }
+
+    // Atualiza todos os elementos visuais dentro do Menu Neutro
+    function syncMenuUIWithDraft() {
+      const d = appState.draft;
+
+      // 1. Tipo de Controle
+      const labelEl = document.getElementById('selectedControlLabel');
+      const iconEl = document.getElementById('selectedControlIcon');
+      const checkTimer = document.getElementById('checkControlTimer');
+      const checkGrowing = document.getElementById('checkControlGrowing');
+
+      if (d.controlType === 'timer') {
+        labelEl.textContent = 'Cronômetro';
+        iconEl.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+        checkTimer.classList.remove('hidden');
+        checkGrowing.classList.add('hidden');
+      } else {
+        labelEl.textContent = 'Elemento que cresce';
+        iconEl.innerHTML = `<span class="w-5 h-5 rounded bg-[#EFEFEC] border border-[#DCDCD8] flex items-center justify-center text-[11px] font-bold">A</span>`;
+        checkGrowing.classList.remove('hidden');
+        checkTimer.classList.add('hidden');
+      }
+
+      // 2. Escolha do Elemento (Alien vs Bonequinho)
+      const btnAlien = document.getElementById('btnElementAlien');
+      const btnBonequinho = document.getElementById('btnElementBonequinho');
+
+      if (d.elementType === 'alien') {
+        btnAlien.classList.add('border-[#1F1F1E]', 'bg-[#FAF9F6]');
+        btnAlien.classList.remove('border-[#DCDCD8]');
+        btnBonequinho.classList.remove('border-[#1F1F1E]', 'bg-[#FAF9F6]');
+        btnBonequinho.classList.add('border-[#DCDCD8]');
+      } else {
+        btnBonequinho.classList.add('border-[#1F1F1E]', 'bg-[#FAF9F6]');
+        btnBonequinho.classList.remove('border-[#DCDCD8]');
+        btnAlien.classList.remove('border-[#1F1F1E]', 'bg-[#FAF9F6]');
+        btnAlien.classList.add('border-[#DCDCD8]');
+      }
+
+      // Atualiza logos dos cards com a cor escolhida (garantindo visibilidade se for branco)
+      const previewStroke = d.elementColor.toLowerCase() === '#ffffff' ? '#1F1F1E' : d.elementColor;
+      document.getElementById('previewLogoAlien').innerHTML = getAlienLogoSVG(previewStroke);
+      document.getElementById('previewLogoBonequinho').innerHTML = getBonequinhoSVG(previewStroke);
+
+      // 3. Cor escolhida
+      document.getElementById('selectedColorHex').textContent = d.elementColor.toUpperCase();
+
+      // 4. Som selecionado
+      document.getElementById('selectedSoundDropdownLabel').textContent = d.soundLabel;
+
+      // 5. Resumo no Rodapé do Menu (estilo Menu.jpg)
+      document.getElementById('summarySoundName').textContent = d.soundLabel;
+      document.getElementById('summaryElementName').textContent = d.elementType === 'alien' ? 'Alien' : 'Bonequinho';
+
+      const miniBox = document.getElementById('summaryElementMiniIcon');
+      miniBox.style.backgroundColor = d.elementColor.toLowerCase() === '#ffffff' ? '#1F1F1E' : '#E6E6E1';
+      miniBox.innerHTML = d.elementType === 'alien'
+        ? getAlienLogoSVG(d.elementColor)
+        : getBonequinhoSVG(d.elementColor);
+    }
+
+    // Salva as configurações e aplica na tela do TikTok
+    function saveAndCloseMenu() {
+      appState.controlType = appState.draft.controlType;
+      appState.elementType = appState.draft.elementType;
+      appState.elementColor = appState.draft.elementColor;
+      appState.soundId = appState.draft.soundId;
+      appState.soundLabel = appState.draft.soundLabel;
+
+      // Garante desbloqueio do AudioContext ao salvar
+      getAudioContext();
+
+      applyControlModeToScreen();
+      closeControlMenu();
+      showToast('Preferências salvas ✓');
+    }
+
+    // =========================================================
+    // 7. MOTOR DE TEMPO, CRONÔMETRO E ELEMENTO QUE CRESCE
+    // =========================================================
+    function formatMMSS(totalSeconds) {
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = Math.floor(totalSeconds % 60);
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function applyControlModeToScreen() {
+      const timerHud = document.getElementById('timerHud');
+      const growingLayer = document.getElementById('growingElementLayer');
+      const activeVisual = document.getElementById('activeElementVisual');
+
+      if (appState.controlType === 'timer') {
+        timerHud.classList.remove('hidden');
+        growingLayer.classList.add('hidden');
+        growingLayer.classList.remove('pointer-events-auto', 'bg-black/75', 'backdrop-blur-md');
+        growingLayer.classList.add('pointer-events-none');
+      } else {
+        timerHud.classList.add('hidden');
+        growingLayer.classList.remove('hidden');
+
+        // Renderiza o Alien cutucando ou o Bonequinho na cor selecionada
+        if (appState.elementType === 'alien') {
+          activeVisual.innerHTML = getAlienPokingSVG(appState.elementColor);
+        } else {
+          activeVisual.innerHTML = getBonequinhoSVG(appState.elementColor, 'bonequinho-float');
+        }
+
+        updateGrowingElementScale();
+      }
+
+      updateTimeDisplays();
+    }
+
+    function updateGrowingElementScale() {
+      const container = document.getElementById('growingElementContainer');
+      const layer = document.getElementById('growingElementLayer');
+      const lockdownBanner = document.getElementById('lockdownBanner');
+      const statusBadge = document.getElementById('statusBadge');
+
+      if (appState.controlType !== 'growing') return;
+
+      if (appState.isLockedDown) {
+        // Durante o período de espera (10 minutos = 600s), o elemento diminui gradualmente
+        const ratio = Math.max(0, appState.cooldownRemaining / 600); // 1.0 -> 0.0
+        const scale = 1 + ratio * 3.2; // Vai de 4.2x (tela cheia) até 1.0x
+        container.style.transform = `scale(${scale.toFixed(2)})`;
+
+        // Mantém a tela bloqueada até terminar os 10 minutos de diminuição
+        layer.classList.remove('pointer-events-none');
+        layer.classList.add('pointer-events-auto', 'bg-black/80', 'backdrop-blur-md');
+        lockdownBanner.classList.remove('hidden');
+
+        document.getElementById('cooldownProgressBar').style.width = `${(ratio * 100).toFixed(1)}%`;
+        document.getElementById('cooldownTimerText').textContent = formatMMSS(appState.cooldownRemaining);
+
+        statusBadge.textContent = 'Tela Bloqueada (Aguardando)';
+        statusBadge.className = 'px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-semibold';
+      } else {
+        // Cresce progressivamente a cada minuto (0 a 10 minutos)
+        const minutesElapsed = appState.elapsedSeconds / 60;
+        // Escala inicial 0.85 até 4.2 aos 10 minutos
+        const scale = Math.min(4.2, 0.85 + minutesElapsed * 0.335);
+        container.style.transform = `scale(${scale.toFixed(2)})`;
+
+        layer.classList.add('pointer-events-none');
+        layer.classList.remove('pointer-events-auto', 'bg-black/80', 'backdrop-blur-md');
+        lockdownBanner.classList.add('hidden');
+
+        statusBadge.textContent = `Crescendo (${Math.floor(minutesElapsed)}/10 min)`;
+        statusBadge.className = 'px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold';
+      }
+    }
+
+    function updateTimeDisplays() {
+      const formatted = formatMMSS(appState.elapsedSeconds);
+      document.getElementById('timerDisplay').textContent = formatted;
+      document.getElementById('externalTimeReadout').textContent = formatted;
+
+      const timerHud = document.getElementById('timerHud');
+      const timerDot = document.getElementById('timerDot');
+      const statusBadge = document.getElementById('statusBadge');
+
+      if (appState.controlType === 'timer') {
+        if (appState.timerAlertRemaining > 0) {
+          timerHud.classList.add('timer-alert-active');
+          timerDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+          statusBadge.textContent = 'Alerta 10 Minutos!';
+          statusBadge.className = 'px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-semibold';
+        } else {
+          timerHud.classList.remove('timer-alert-active');
+          timerDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          statusBadge.textContent = 'Cronômetro Ativo';
+          statusBadge.className = 'px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold';
+        }
+      }
+    }
+
+    // Tick principal a cada 1 segundo
+    function onSecondTick() {
+      // Atualiza relógio real do topo do celular
+      const now = new Date();
+      document.getElementById('phoneClock').textContent =
+        `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      // Se estiver em pausa obrigatória (elemento cresceu até o limite)
+      if (appState.controlType === 'growing' && appState.isLockedDown) {
+        if (appState.cooldownRemaining > 0) {
+          appState.cooldownRemaining -= 1;
+          updateGrowingElementScale();
+        } else {
+          // Terminou os 10 minutos de diminuição: libera a tela!
+          appState.isLockedDown = false;
+          appState.elapsedSeconds = 0;
+          appState.lastTenMinMilestone = 0;
+          updateGrowingElementScale();
+          showToast('Tela liberada! Elemento voltou ao normal.');
+        }
+        return;
+      }
+
+      // Incrementa o tempo de uso ativo
+      appState.elapsedSeconds += 1;
+
+      // Gerencia duração do alerta vermelho do cronômetro
+      if (appState.timerAlertRemaining > 0) {
+        appState.timerAlertRemaining -= 1;
+      }
+
+      // Verifica marcos de 10 minutos (600s, 1200s, 1800s...)
+      const currentTenMinMilestone = Math.floor(appState.elapsedSeconds / 600);
+      if (currentTenMinMilestone > appState.lastTenMinMilestone && currentTenMinMilestone >= 1) {
+        appState.lastTenMinMilestone = currentTenMinMilestone;
+        triggerTenMinuteEvent();
+      }
+
+      if (appState.controlType === 'growing') {
+        updateGrowingElementScale();
+      }
+      updateTimeDisplays();
+    }
+
+    function triggerTenMinuteEvent() {
+      // Toca o som configurado (Sound 5, criado ou arquivo do usuário)
+      playSoundById(appState.soundId);
+
+      if (appState.controlType === 'timer') {
+        // Números ficam vermelhos pulsando por 6 segundos
+        appState.timerAlertRemaining = 6;
+        showToast('⏰ 10 minutos se passaram!');
+      } else if (appState.controlType === 'growing') {
+        // Elemento atinge tamanho máximo e bloqueia a tela por 10 minutos
+        appState.isLockedDown = true;
+        appState.cooldownRemaining = 600; // 10 minutos para diminuir
+        updateGrowingElementScale();
+      }
+      updateTimeDisplays();
+    }
+
+    // =========================================================
+    // 8. FUNÇÕES DOS CONTROLES EXTERNOS DE SIMULAÇÃO
+    // =========================================================
+    function advanceTimeBySeconds(seconds) {
+      getAudioContext();
+      if (appState.controlType === 'growing' && appState.isLockedDown) {
+        appState.cooldownRemaining = Math.max(0, appState.cooldownRemaining - seconds);
+        if (appState.cooldownRemaining === 0) {
+          appState.isLockedDown = false;
+          appState.elapsedSeconds = 0;
+          appState.lastTenMinMilestone = 0;
+          showToast('Tela liberada!');
+        }
+        updateGrowingElementScale();
+        return;
+      }
+
+      appState.elapsedSeconds += seconds;
+      const milestone = Math.floor(appState.elapsedSeconds / 600);
+      if (milestone > appState.lastTenMinMilestone && milestone >= 1) {
+        appState.lastTenMinMilestone = milestone;
+        triggerTenMinuteEvent();
+      } else {
+        if (appState.controlType === 'growing') {
+          updateGrowingElementScale();
+        }
+        updateTimeDisplays();
+        showToast(`+${Math.round(seconds / 60)} min simulado`);
+      }
+    }
+
+    function simulateTenMinutesTrigger() {
+      getAudioContext();
+      if (appState.controlType === 'growing' && appState.isLockedDown) {
+        // Se já estiver bloqueado, simula o fim dos 10 minutos de espera para liberar
+        appState.cooldownRemaining = 0;
+        appState.isLockedDown = false;
+        appState.elapsedSeconds = 0;
+        appState.lastTenMinMilestone = 0;
+        updateGrowingElementScale();
+        showToast('Espera concluída! Tela liberada.');
+        return;
+      }
+
+      const nextMilestone = appState.lastTenMinMilestone + 1;
+      appState.elapsedSeconds = nextMilestone * 600;
+      appState.lastTenMinMilestone = nextMilestone;
+      triggerTenMinuteEvent();
+    }
+
+    function resetSimulationTime() {
+      appState.elapsedSeconds = 0;
+      appState.lastTenMinMilestone = 0;
+      appState.timerAlertRemaining = 0;
+      appState.isLockedDown = false;
+      appState.cooldownRemaining = 600;
+      applyControlModeToScreen();
+      showToast('Tempo resetado para 00:00');
+    }
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('phoneToast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2400);
+    }
+
+    // =========================================================
+    // 9. INICIALIZAÇÃO
+    // =========================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      renderSimulatedFeed();
+      syncMenuUIWithDraft();
+      applyControlModeToScreen();
+      setInterval(onSecondTick, 1000);
+    });
+  </script>
+</body>
+</html>
